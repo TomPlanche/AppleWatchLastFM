@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = NowPlayingViewModel()
+    @State private var isPressed = false
     
     var body: some View {
         Group {
@@ -54,9 +55,40 @@ struct ContentView: View {
                             .opacity(0.3)
                     )
                     
+                    // Loading spinner
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.5)
+                    }
                 }
+                .scaleEffect(isPressed ? 0.95 : 1.0)
+                .animation(.spring(response: 0.3), value: isPressed)
+                .gesture(
+                    LongPressGesture(minimumDuration: 0.75)
+                        .onEnded { _ in
+                            Task {
+                                await viewModel.fetchNowPlaying()
+                            }
+                        }
+                        .simultaneously(with: 
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { _ in
+                                    isPressed = true
+                                }
+                                .onEnded { _ in
+                                    isPressed = false
+                                }
+                        )
+                )
             } else {
-                Text("Nothing playing")
+                if viewModel.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(1.5)
+                } else {
+                    Text("Nothing playing")
+                }
             }
         }
         .task {
